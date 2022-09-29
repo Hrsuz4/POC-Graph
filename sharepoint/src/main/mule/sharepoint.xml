@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:sharepoint="http://www.mulesoft.org/schema/mule/sharepoint" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sharepoint http://www.mulesoft.org/schema/mule/sharepoint/current/mule-sharepoint.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getSite" doc:id="9b73a3b3-2afc-4ce5-a363-fd68cb0035d9" >
+		<http:listener doc:name="Listener" doc:id="e2d9149d-ea06-4a50-b924-843f6b3c6f3f" path="/site" config-ref="HTTP_Listener_config"/>
+		<http:request method="GET" doc:name="GET/sites/{hostname}:/sites/{siteName}" doc:id="164e857d-56bd-4fe2-a19d-16ee5bad78ce" path="/sites/{hostname}:/sites/{siteName}" config-ref="graphAPI-HTTPS_Request_configuration">
+			<http:uri-params ><![CDATA[#[output application/java
+import * from dw::core::Strings
+---
+{
+    hostname: p('sharepoint.hostname'),
+    siteName: p('sharepoint.siteName'),
+}]]]></http:uri-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="c87c114e-979e-443e-95d5-607c58999dce" message="#[payload]"/>
+	</flow>
+	<flow name="uploadFile" doc:id="b9d46e76-5158-449b-abb1-0496fd8e0852" >
+		<http:listener doc:name="Listener" doc:id="c47afd09-90ab-4caa-9902-bc6a0d39fba4" path="/file" config-ref="HTTP_Listener_config"/>
+		<choice doc:name="Choice" doc:id="fa22e74c-af13-4faa-a3a2-6a88d148e73b" >
+			<when expression='#[typeOf(payload) contains "Binary"]'>
+				<choice doc:name="Choice" doc:id="acae1a99-242e-4d11-bb85-674a99d7247e" >
+					<when expression='#[payload.^mediaType contains "image/jpeg"]'>
+						<set-variable value="nekaslika.jpg" doc:name="Set Variable" doc:id="5da7a521-fbb8-4aeb-b642-0d5974f917f4" variableName="bestandsnaam"/>
+					</when>
+					<when expression='#[payload.^mediaType contains "image/bmp"]'>
+						<set-variable value="nekaslika.bmp" doc:name="Set Variable" doc:id="9d19af5a-2290-4e83-93bc-7108dee5b32a" variableName="bestandsnaam"/>
+					</when>
+					<when expression='#[payload.^mediaType contains "image/gif"]'>
+						<set-variable value="nekaslika.gif" doc:name="Set Variable" doc:id="c1352cc9-827f-4f6b-9b97-dc40cfee8ad0" variableName="bestandsnaam"/>
+					</when>
+					<when expression='#[payload.^mediaType contains "video/mp4"]'>
+						<set-variable value="nekivideo.mp4" doc:name="Set Variable" doc:id="c578d13b-9d67-4de3-a085-e891eaf36b9f" variableName="bestandsnaam"/>
+					</when>
+					<otherwise >
+						<set-variable value="nekaslika.png" doc:name="Set Variable" doc:id="16a01aa9-91b5-4578-b15c-2831be6a5160" variableName="bestandsnaam" />
+					</otherwise>
+				</choice>
+				<ee:transform doc:name="Transform Message" doc:id="6b858485-1820-4bc8-914c-2b3fc2deb25e">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/octet-stream
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="f8f7fe41-9193-44c7-ad31-bac73d59530e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output multipart/form-data
+---
+
+payload
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="fileMap"><![CDATA[%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+				<set-variable value='#[vars.fileMap.parts.file.headers."Content-Disposition".filename]' doc:name="Set bestandsnaam" doc:id="61c20c8f-7281-4149-9867-9fe82cde30a7" variableName="bestandsnaam" />
+				<set-variable value='#[vars.fileMap.parts.file.headers."Content-Type"]' doc:name="fileType" doc:id="0fb41c27-bd2b-40e2-8e9b-e9f8501b1409" variableName="fileType" />
+				<choice doc:name="Choice" doc:id="586584b1-5b8c-4e56-aa49-f3e922347d48">
+			<when expression='#[vars.fileType == "text/plain"]'>
+				<ee:transform doc:name="Request" doc:id="cad13eab-eb6c-4313-a2db-1bd4c57dc286">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+vars.fileMap.parts.file.content
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression='#[vars.fileType == "text/csv"]'>
+				<ee:transform doc:name="Transform Message" doc:id="027e6181-6348-4138-98f8-0dcfc6c72503">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/csv
+---
+vars.fileMap.parts.file.content]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression='#[vars.fileType == "application/xml"]'>
+				<ee:transform doc:name="Transform Message" doc:id="c5c0b870-8882-4b4b-bd36-89612ae0b8e5">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+---
+vars.fileMap.parts.file.content]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Request" doc:id="d32f8adb-949e-4381-bffe-c124595fa256">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output multipart/form-data
+---
+payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice>
+			</otherwise>
+		</choice>
+		<set-variable value="b!iyMTKrNbDUyoT66fyIr9dQ_4r20iGGtPleMHsHDGxcbv3U2_epc5R65PRuDqveCw" doc:name="Set drive-id" doc:id="d71b0294-f09f-4f2b-bc7e-d45c00ce2d54" variableName="driveId" />
+		<http:request method="PUT" doc:name="PUT/drivers/{drive-id}/items/root:/{bestandsnaam}:/content" doc:id="e5b34803-f1c2-443a-8a7a-fdd56494b022" path="/drives/{drive-id}/items/root:/{bestandsnaam}:/content" config-ref="graphAPI-HTTPS_Request_configuration">
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	'drive-id': vars.driveId,
+	bestandsnaam: vars.bestandsnaam
+}]]]></http:uri-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="fe330deb-edf3-4220-911c-f0c980fae85b" message="#[payload]"/>
+	</flow>
+</mule>

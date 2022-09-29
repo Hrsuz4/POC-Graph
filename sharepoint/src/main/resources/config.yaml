@@ -1,0 +1,12 @@
+graphAPI:
+  host: "graph.microsoft.com"
+  basePath: "/v1.0"
+  tenantId: "85c37760-08af-4d9a-921d-58f9f84e19e7"
+  clientId: "5ff44d94-4d0a-422d-ae8b-9301c1ef9142"
+  clientSecret: "SWR8Q~EqcIHGlCDnpc_3X3B_nj41elOLdvUIWbOy"  
+  scopes: "https://graph.microsoft.com/.default"
+  tokenUrl: "https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token"
+  
+sharepoint:
+  hostname: "harmony639.sharepoint.com"
+  siteName: "POCGRAPHAPI" 

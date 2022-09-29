@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7b82163b-426b-48a4-9522-2595f459319a" basePath="/" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	 <http:request-config name="graphAPI-HTTPS_Request_configuration" doc:name="HTTP Request configuration" doc:id="ce46001b-5476-4c2c-a3a1-68d2e620ee15" basePath="${graphAPI.basePath}">
+        <http:request-connection host="${graphAPI.host}" protocol="HTTPS">
+            <http:authentication>
+                <oauth:client-credentials-grant-type clientId="${graphAPI.clientId}" clientSecret="${graphAPI.clientSecret}" scopes="${graphAPI.scopes}" tokenUrl="#[p('graphAPI.tokenUrl') replace '{tenantId}' with p('graphAPI.tenantId')]" />
+            </http:authentication>
+        </http:request-connection>
+    </http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="0eee7217-9cf0-4996-861f-758d0c5c3056" file="config.yaml" />    
+</mule>
